@@ -1,0 +1,1 @@
+- [Chess strength labels](chess-strength.md) — The 700/900/1100 levels are approximate, not calibrated Elo ratings.

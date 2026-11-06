@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Шахматы"
+description = "Простая браузерная шахматная игра против компьютера с полными правилами, выбором силы игры и случайным выбором цвета. Работает локально без сервера."
+version = "1.0.0"
+id = "artifacts/chess-game"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18615
+
+[services.development]
+run = "pnpm --filter @workspace/chess-game run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/chess-game", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/chess-game/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18615"
+BASE_PATH = "/"
