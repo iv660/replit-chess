@@ -1,1 +1,2 @@
 - [Chess strength labels](chess-strength.md) — The 700/900/1100 levels are approximate, not calibrated Elo ratings.
+- [Vue and chess.js reactivity](vue-chess-reactivity.md) — Keep the mutable chess.js engine in shallowRef; legal-move generation temporarily mutates and restores board state.

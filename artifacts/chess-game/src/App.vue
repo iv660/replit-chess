@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, shallowRef } from 'vue';
 import { Chess, type PieceSymbol, type Square } from 'chess.js';
 import { chooseComputerMove, type EloLevel } from './chess-ai';
 
@@ -25,7 +25,9 @@ const promotionChoices: { type: PromotionPiece; label: string }[] = [
 const screen = ref<Screen>('setup');
 const selectedLevel = ref<EloLevel>(900);
 const playerColor = ref<Color>('w');
-const chess = ref(new Chess());
+// chess.js temporarily mutates and restores its board while generating legal moves.
+// Keep the engine out of Vue's deep reactivity; revision explicitly refreshes the UI.
+const chess = shallowRef(new Chess());
 const revision = ref(0);
 const selectedSquare = ref<Square | null>(null);
 const legalDestinations = ref<Square[]>([]);
