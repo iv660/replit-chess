@@ -54,7 +54,11 @@ const gameOver = computed(() => {
   revision.value;
   return chess.value.isGameOver();
 });
-const isPlayerTurn = computed(() => chess.value.turn() === playerColor.value && !gameOver.value);
+const isPlayerTurn = computed(() => {
+  // Track every committed position: gameOver can remain false across a turn change.
+  revision.value;
+  return chess.value.turn() === playerColor.value && !gameOver.value;
+});
 
 function pieceName(piece: PieceSymbol): string {
   return ({ k: 'король', q: 'ферзь', r: 'ладья', b: 'слон', n: 'конь', p: 'пешка' })[piece];
