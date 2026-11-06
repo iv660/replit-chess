@@ -269,10 +269,10 @@ onBeforeUnmount(() => {
       <section v-else class="game-layout" aria-label="Шахматная партия">
         <div class="board-column">
           <div class="player-strip">
-            <div class="player-avatar" :class="playerColor === 'w' ? 'avatar-light' : 'avatar-dark'" aria-hidden="true">{{ playerColor === 'w' ? '♔' : '♚' }}</div>
+            <div class="player-avatar" :class="playerColor === 'w' ? 'avatar-dark' : 'avatar-light'" aria-hidden="true">{{ playerColor === 'w' ? '♚' : '♔' }}</div>
             <div>
-              <div class="player-name">Вы · {{ playerLabel }}</div>
-              <div class="player-sub">Ориентир {{ selectedLevel }} Elo</div>
+              <div class="player-name">Соперник · {{ computerLabel }}</div>
+              <div class="player-sub">Компьютер</div>
             </div>
             <span class="turn-indicator" :class="{ active: !isPlayerTurn && !gameOver }" aria-label="Сейчас ход соперника"></span>
           </div>
@@ -304,12 +304,12 @@ onBeforeUnmount(() => {
           </div>
           <div class="board-caption"><span>Партия · ~{{ selectedLevel }} Elo</span><span>Без часов</span></div>
           <div class="player-strip">
-            <div class="player-avatar" :class="playerColor === 'w' ? 'avatar-dark' : 'avatar-light'" aria-hidden="true">{{ playerColor === 'w' ? '♚' : '♔' }}</div>
+            <div class="player-avatar" :class="playerColor === 'w' ? 'avatar-light' : 'avatar-dark'" aria-hidden="true">{{ playerColor === 'w' ? '♔' : '♚' }}</div>
             <div>
-              <div class="player-name">Соперник · {{ computerLabel }}</div>
-              <div class="player-sub">Компьютер</div>
+              <div class="player-name">Вы · {{ playerLabel }}</div>
+              <div class="player-sub">Ориентир {{ selectedLevel }} Elo</div>
             </div>
-            <span class="turn-indicator" :class="{ active: thinking }" aria-label="Соперник обдумывает ход"></span>
+            <span class="turn-indicator" :class="{ active: isPlayerTurn }" aria-label="Сейчас ваш ход"></span>
           </div>
         </div>
 
