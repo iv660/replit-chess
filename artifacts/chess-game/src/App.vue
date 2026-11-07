@@ -1,27 +1,21 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, shallowRef } from 'vue';
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { Chess, type PieceSymbol, type Square } from 'chess.js';
+import { useI18n } from 'vue-i18n';
 import { chooseComputerMove, type EloLevel } from './chess-ai';
+import { localeStorageKey } from './i18n';
 
 type Color = 'w' | 'b';
 type Screen = 'setup' | 'game';
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
-const levels: { value: EloLevel; label: string }[] = [
-  { value: 700, label: 'Для разминки' },
-  { value: 900, label: 'Уверенная игра' },
-  { value: 1100, label: 'Посложнее' },
-];
+const levels: EloLevel[] = [700, 900, 1100];
 const pieceGlyphs: Record<Color, Record<PieceSymbol, string>> = {
   w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
   b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
 };
-const promotionChoices: { type: PromotionPiece; label: string }[] = [
-  { type: 'q', label: 'Ферзь' },
-  { type: 'r', label: 'Ладья' },
-  { type: 'b', label: 'Слон' },
-  { type: 'n', label: 'Конь' },
-];
+const promotionChoices: PromotionPiece[] = ['q', 'r', 'b', 'n'];
+const { t, locale } = useI18n({ useScope: 'global' });
 const screen = ref<Screen>('setup');
 const selectedLevel = ref<EloLevel>(900);
 const playerColor = ref<Color>('w');
@@ -36,6 +30,33 @@ const thinking = ref(false);
 const promotionFrom = ref<Square | null>(null);
 const promotionTo = ref<Square | null>(null);
 let computerTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+  locale,
+  (nextLocale) => {
+    const activeLocale = nextLocale === 'ru' ? 'ru' : 'en';
+    document.documentElement.lang = activeLocale;
+    document.title = t('meta.title');
+
+    const localizedMeta = [
+      ['meta[name="description"]', 'meta.description'],
+      ['meta[property="og:title"]', 'meta.title'],
+      ['meta[property="og:description"]', 'meta.description'],
+      ['meta[name="twitter:title"]', 'meta.title'],
+      ['meta[name="twitter:description"]', 'meta.description'],
+    ] as const;
+    for (const [selector, key] of localizedMeta) {
+      document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', t(key));
+    }
+
+    try {
+      window.localStorage.setItem(localeStorageKey, activeLocale);
+    } catch {
+      // The selected locale still works for this session when storage is unavailable.
+    }
+  },
+  { immediate: true },
+);
 
 const boardSquares = computed(() => {
   revision.value;
@@ -61,12 +82,30 @@ const isPlayerTurn = computed(() => {
 });
 
 function pieceName(piece: PieceSymbol): string {
-  return ({ k: 'король', q: 'ферзь', r: 'ладья', b: 'слон', n: 'конь', p: 'пешка' })[piece];
+  switch (piece) {
+    case 'k': return t('pieces.king');
+    case 'q': return t('pieces.queen');
+    case 'r': return t('pieces.rook');
+    case 'b': return t('pieces.bishop');
+    case 'n': return t('pieces.knight');
+    case 'p': return t('pieces.pawn');
+  }
+}
+function levelName(level: EloLevel): string {
+  switch (level) {
+    case 700: return t('levels.700');
+    case 900: return t('levels.900');
+    case 1100: return t('levels.1100');
+  }
 }
 function squareLabel(square: Square): string {
   const piece = chess.value.get(square);
-  if (!piece) return `${square}, пустая клетка`;
-  return `${square}, ${piece.color === 'w' ? 'белые' : 'чёрные'}: ${pieceName(piece.type)}`;
+  if (!piece) return t('board.emptySquare', { square });
+  return t('board.pieceSquare', {
+    square,
+    color: t(piece.color === 'w' ? 'colors.white' : 'colors.black').toLocaleLowerCase(),
+    piece: pieceName(piece.type),
+  });
 }
 function isLightSquare(row: number, column: number): boolean {
   return (row + column) % 2 === 1;
@@ -184,28 +223,28 @@ function scheduleComputerMove() {
   }, 550);
 }
 function resultMessage(): string {
-  if (chess.value.isCheckmate()) return chess.value.turn() === playerColor.value ? 'Мат. Партия окончена.' : 'Вы поставили мат.';
-  if (chess.value.isStalemate()) return 'Пат. Ничья.';
-  if (chess.value.isThreefoldRepetition()) return 'Троекратное повторение. Ничья.';
-  if (chess.value.isInsufficientMaterial()) return 'Недостаточно фигур для мата. Ничья.';
-  if (chess.value.isDraw()) return 'Ничья.';
+  if (chess.value.isCheckmate()) return t(chess.value.turn() === playerColor.value ? 'results.checkmateLoss' : 'results.checkmateWin');
+  if (chess.value.isStalemate()) return t('results.stalemate');
+  if (chess.value.isThreefoldRepetition()) return t('results.repetition');
+  if (chess.value.isInsufficientMaterial()) return t('results.insufficient');
+  if (chess.value.isDraw()) return t('results.draw');
   return '';
 }
 const turnTitle = computed(() => {
   revision.value;
   if (gameOver.value) return resultMessage();
-  if (thinking.value) return 'Соперник обдумывает ход';
-  if (chess.value.isCheck()) return isPlayerTurn.value ? 'Шах. Ваш ход' : 'Шах сопернику';
-  return isPlayerTurn.value ? 'Ваш ход' : 'Ход соперника';
+  if (thinking.value) return t('game.statusThinking');
+  if (chess.value.isCheck()) return t(isPlayerTurn.value ? 'game.statusCheckYourTurn' : 'game.statusCheckOpponent');
+  return t(isPlayerTurn.value ? 'game.statusYourTurn' : 'game.statusOpponentTurn');
 });
 const turnDetail = computed(() => {
-  if (gameOver.value) return 'Можно начать новую партию в любой момент.';
-  if (thinking.value) return 'Компьютер выбирает продолжение. Немного терпения.';
-  if (chess.value.isCheck()) return 'Король под атакой — найдите безопасный ответ.';
-  return isPlayerTurn.value ? 'Выберите фигуру, затем клетку для хода.' : 'Партия продолжается.';
+  if (gameOver.value) return t('game.detailFinished');
+  if (thinking.value) return t('game.detailThinking');
+  if (chess.value.isCheck()) return t('game.detailCheck');
+  return t(isPlayerTurn.value ? 'game.detailYourTurn' : 'game.detailOpponentTurn');
 });
-const playerLabel = computed(() => playerColor.value === 'w' ? 'Белые' : 'Чёрные');
-const computerLabel = computed(() => playerColor.value === 'w' ? 'Чёрные' : 'Белые');
+const playerLabel = computed(() => t(playerColor.value === 'w' ? 'colors.white' : 'colors.black'));
+const computerLabel = computed(() => t(playerColor.value === 'w' ? 'colors.black' : 'colors.white'));
 const fileLetters = computed(() => playerColor.value === 'w' ? 'abcdefgh'.split('') : 'hgfedcba'.split(''));
 const rankNumbers = computed(() => playerColor.value === 'w' ? '87654321'.split('') : '12345678'.split(''));
 
@@ -217,71 +256,74 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand" aria-label="Тихий ход — шахматный стол">
+      <div class="brand" :aria-label="t('brand.ariaLabel')">
         <div class="brand-mark" aria-hidden="true">♞</div>
         <div>
-          <div class="brand-name">Тихий ход</div>
-          <div class="brand-note">шахматный стол</div>
+          <div class="brand-name">{{ t('brand.name') }}</div>
+          <div class="brand-note">{{ t('brand.note') }}</div>
         </div>
       </div>
-      <div class="top-note">Партия без спешки</div>
+      <div class="topbar-right">
+        <div class="top-note">{{ t('brand.topNote') }}</div>
+        <select v-model="locale" class="language-select" :aria-label="t('language.label')">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+        </select>
+      </div>
     </header>
 
     <main class="main-layout">
       <section v-if="screen === 'setup'" class="setup-view" aria-labelledby="setup-title">
         <div class="intro">
-          <div class="eyebrow">Ваше место за доской</div>
-          <h1 id="setup-title">Одна партия.<br /><em>В своём ритме.</em></h1>
-          <p class="intro-copy">
-            Здесь всё просто: выберите силу соперника и садитесь за доску.
-            Без регистрации, часов и лишних отвлечений.
-          </p>
+          <div class="eyebrow">{{ t('setup.eyebrow') }}</div>
+          <h1 id="setup-title">{{ t('setup.headlineFirst') }}<br /><em>{{ t('setup.headlineSecond') }}</em></h1>
+          <p class="intro-copy">{{ t('setup.intro') }}</p>
           <div class="little-rule"></div>
-          <div class="motto">Доска уже ждёт.</div>
+          <div class="motto">{{ t('setup.motto') }}</div>
         </div>
 
         <div class="setup-card">
           <div class="decorative-board" aria-hidden="true">
             <i v-for="n in 16" :key="n"></i>
           </div>
-          <div class="card-kicker">Новая партия</div>
-          <h2>Выберите соперника</h2>
-          <span class="field-label" id="level-label">Уровень игры</span>
+          <div class="card-kicker">{{ t('setup.cardKicker') }}</div>
+          <h2>{{ t('setup.chooseOpponent') }}</h2>
+          <span class="field-label" id="level-label">{{ t('setup.levelLabel') }}</span>
           <div class="level-options" role="group" aria-labelledby="level-label">
             <button
               v-for="level in levels"
-              :key="level.value"
+              :key="level"
               type="button"
               class="level-button"
-              :class="{ selected: selectedLevel === level.value }"
-              :aria-pressed="selectedLevel === level.value"
-              @click="selectedLevel = level.value"
+              :class="{ selected: selectedLevel === level }"
+              :aria-pressed="selectedLevel === level"
+              @click="selectedLevel = level"
             >
-              <strong>{{ level.value }}</strong>
-              <span>{{ level.label }}</span>
+              <strong>{{ level }}</strong>
+              <span>{{ levelName(level) }}</span>
             </button>
           </div>
-          <p class="rating-note">Уровни ориентировочные, не официальный рейтинг.</p>
+          <p class="rating-note">{{ t('setup.ratingNote') }}</p>
           <button class="start-button" type="button" @click="startNewGame">
-            Начать партию
+            {{ t('setup.start') }}
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M10 5l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </button>
-          <p class="setup-foot">Цвет фигур определится случайно</p>
+          <p class="setup-foot">{{ t('setup.randomColor') }}</p>
         </div>
       </section>
 
-      <section v-else class="game-layout" aria-label="Шахматная партия">
+      <section v-else class="game-layout" :aria-label="t('game.ariaLabel')">
         <div class="board-column">
           <div class="player-strip">
             <div class="player-avatar" :class="playerColor === 'w' ? 'avatar-dark' : 'avatar-light'" aria-hidden="true">{{ playerColor === 'w' ? '♚' : '♔' }}</div>
             <div>
-              <div class="player-name">Соперник · {{ computerLabel }}</div>
-              <div class="player-sub">Компьютер</div>
+              <div class="player-name">{{ t('game.opponentName', { color: computerLabel }) }}</div>
+              <div class="player-sub">{{ t('game.computerSub') }}</div>
             </div>
-            <span class="turn-indicator" :class="{ active: !isPlayerTurn && !gameOver }" aria-label="Сейчас ход соперника"></span>
+            <span class="turn-indicator" :class="{ active: !isPlayerTurn && !gameOver }" :aria-label="t('game.opponentTurnIndicator')"></span>
           </div>
           <div class="board-frame">
-            <div class="chessboard" role="grid" aria-label="Шахматная доска">
+            <div class="chessboard" role="grid" :aria-label="t('board.ariaLabel')">
               <button
                 v-for="cell in boardSquares"
                 :key="cell.square"
@@ -306,20 +348,23 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
-          <div class="board-caption"><span>Партия · ~{{ selectedLevel }} Elo</span><span>Без часов</span></div>
+          <div class="board-caption">
+            <span>{{ t('board.caption', { level: selectedLevel }) }}</span>
+            <span>{{ t('board.noClock') }}</span>
+          </div>
           <div class="player-strip">
             <div class="player-avatar" :class="playerColor === 'w' ? 'avatar-light' : 'avatar-dark'" aria-hidden="true">{{ playerColor === 'w' ? '♔' : '♚' }}</div>
             <div>
-              <div class="player-name">Вы · {{ playerLabel }}</div>
-              <div class="player-sub">Ориентир {{ selectedLevel }} Elo</div>
+              <div class="player-name">{{ t('game.playerName', { color: playerLabel }) }}</div>
+              <div class="player-sub">{{ t('game.playerSub', { level: selectedLevel }) }}</div>
             </div>
-            <span class="turn-indicator" :class="{ active: isPlayerTurn }" aria-label="Сейчас ваш ход"></span>
+            <span class="turn-indicator" :class="{ active: isPlayerTurn }" :aria-label="t('game.yourTurnIndicator')"></span>
           </div>
         </div>
 
         <aside class="game-panel" aria-live="polite">
-          <div class="eyebrow">За доской</div>
-          <h1>Ваша партия</h1>
+          <div class="eyebrow">{{ t('game.panelEyebrow') }}</div>
+          <h1>{{ t('game.panelTitle') }}</h1>
           <div class="turn-card" :class="{ waiting: thinking, finished: gameOver }">
             <div class="turn-symbol" aria-hidden="true">{{ gameOver ? '·' : thinking ? '…' : isPlayerTurn ? (playerColor === 'w' ? '♔' : '♚') : (playerColor === 'w' ? '♚' : '♔') }}</div>
             <div>
@@ -328,32 +373,32 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="panel-divider"></div>
-          <div class="detail-row"><span>Соперник</span><strong>Компьютер</strong></div>
-          <div class="detail-row"><span>Уровень</span><strong>~{{ selectedLevel }} Elo</strong></div>
-          <div class="detail-row"><span>Ваш цвет</span><strong>{{ playerLabel }}</strong></div>
+          <div class="detail-row"><span>{{ t('game.opponent') }}</span><strong>{{ t('game.computer') }}</strong></div>
+          <div class="detail-row"><span>{{ t('game.level') }}</span><strong>~{{ selectedLevel }} Elo</strong></div>
+          <div class="detail-row"><span>{{ t('game.yourColor') }}</span><strong>{{ playerLabel }}</strong></div>
           <button class="new-game-button" type="button" @click="returnToSetup">
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 8A6.5 6.5 0 1 0 17 11M16 4v4h-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            Новая партия
+            {{ t('game.newGame') }}
           </button>
-          <p class="gentle-note">Хороший ход начинается с паузы.</p>
+          <p class="gentle-note">{{ t('game.gentleNote') }}</p>
         </aside>
       </section>
     </main>
 
     <div v-if="promotionFrom && promotionTo" class="modal-backdrop" @click.self="promotionFrom = null; promotionTo = null">
       <section class="promotion-dialog" role="dialog" aria-modal="true" aria-labelledby="promotion-title">
-        <h2 id="promotion-title">Превращение пешки</h2>
-        <p>Выберите фигуру для продолжения партии.</p>
+        <h2 id="promotion-title">{{ t('promotion.title') }}</h2>
+        <p>{{ t('promotion.description') }}</p>
         <div class="promotion-options">
           <button
             v-for="option in promotionChoices"
-            :key="option.type"
+            :key="option"
             type="button"
             class="promotion-choice"
-            :aria-label="option.label"
-            @click="choosePromotion(option.type)"
+            :aria-label="pieceName(option)"
+            @click="choosePromotion(option)"
           >
-            <span class="piece" :class="playerColor === 'w' ? 'white-piece' : 'black-piece'" aria-hidden="true">{{ pieceGlyphs[playerColor][option.type] }}</span>
+            <span class="piece" :class="playerColor === 'w' ? 'white-piece' : 'black-piece'" aria-hidden="true">{{ pieceGlyphs[playerColor][option] }}</span>
           </button>
         </div>
       </section>
