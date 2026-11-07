@@ -18,14 +18,14 @@ function getInitialLocale(): SupportedLocale {
 const messages = {
   en: {
     meta: {
-      title: 'Play for the joy of it — Chess',
+      title: 'Play for fun — Chess',
       description:
         'Play chess against the computer. Choose a level and side, with the full rules of chess.',
     },
     language: { label: 'Language' },
     brand: {
-      ariaLabel: 'Play for the joy of it — chess table',
-      name: 'Play for the joy of it',
+      ariaLabel: 'Play for fun — chess table',
+      name: 'Play for fun',
       note: 'chess table',
       topNote: 'A game at your own pace',
     },
