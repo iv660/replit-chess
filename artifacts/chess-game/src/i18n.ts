@@ -18,14 +18,14 @@ function getInitialLocale(): SupportedLocale {
 const messages = {
   en: {
     meta: {
-      title: 'Quiet Move — Chess',
+      title: 'Play for the joy of it — Chess',
       description:
         'Play chess against the computer. Choose a level and side, with the full rules of chess.',
     },
     language: { label: 'Language' },
     brand: {
-      ariaLabel: 'Quiet Move — chess table',
-      name: 'Quiet Move',
+      ariaLabel: 'Play for the joy of it — chess table',
+      name: 'Play for the joy of it',
       note: 'chess table',
       topNote: 'A game at your own pace',
     },
@@ -106,14 +106,14 @@ const messages = {
   },
   ru: {
     meta: {
-      title: 'Тихий ход — шахматы',
+      title: 'Игра в удовольствие — шахматы',
       description:
         'Играйте в шахматы против компьютера. Выберите уровень и сторону — правила соблюдаются полностью.',
     },
     language: { label: 'Язык' },
     brand: {
-      ariaLabel: 'Тихий ход — шахматный стол',
-      name: 'Тихий ход',
+      ariaLabel: 'Игра в удовольствие — шахматный стол',
+      name: 'Игра в удовольствие',
       note: 'шахматный стол',
       topNote: 'Партия без спешки',
     },
